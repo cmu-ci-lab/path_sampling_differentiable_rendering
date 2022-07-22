@@ -627,6 +627,10 @@ static const char *__doc_mitsuba_BSDFFlags_DeltaReflection = R"doc(Reflection in
 
 static const char *__doc_mitsuba_BSDFFlags_DeltaTransmission = R"doc(Transmission into a discrete set of directions)doc";
 
+static const char *__doc_mitsuba_BSDFFlags_DifferentialSamplingNegative = R"doc(Target the negative valued dBSDF with differential sampling?)doc";
+
+static const char *__doc_mitsuba_BSDFFlags_DifferentialSamplingPositive = R"doc(Target the positive valued dBSDF with differential sampling?)doc";
+
 static const char *__doc_mitsuba_BSDFFlags_Diffuse = R"doc(Diffuse scattering into a 2D set of directions)doc";
 
 static const char *__doc_mitsuba_BSDFFlags_DiffuseReflection = R"doc(Ideally diffuse reflection)doc";
@@ -3730,8 +3734,6 @@ static const char *__doc_mitsuba_Jit_get_instance = R"doc()doc";
 
 static const char *__doc_mitsuba_Jit_mutex = R"doc()doc";
 
-static const char *__doc_mitsuba_Jit_runtime = R"doc()doc";
-
 static const char *__doc_mitsuba_Jit_static_initialization =
 R"doc(Statically initialize the JIT runtime
 
@@ -4384,10 +4386,6 @@ Returns:
     distance from the ray origin to the intersection point, and ``u``
     and ``v`` contains the first two components of the intersection in
     barycentric coordinates)doc";
-
-static const char *__doc_mitsuba_Mesh_optix_build_input = R"doc()doc";
-
-static const char *__doc_mitsuba_Mesh_optix_prepare_geometry = R"doc()doc";
 
 static const char *__doc_mitsuba_Mesh_parameters_changed = R"doc()doc";
 
@@ -6946,8 +6944,6 @@ static const char *__doc_mitsuba_ShapeGroup_has_meshes = R"doc(Return whether th
 
 static const char *__doc_mitsuba_ShapeGroup_has_others = R"doc(Return whether this shapegroup contains other type of shapes)doc";
 
-static const char *__doc_mitsuba_ShapeGroup_m_accel = R"doc()doc";
-
 static const char *__doc_mitsuba_ShapeGroup_m_bbox = R"doc()doc";
 
 static const char *__doc_mitsuba_ShapeGroup_m_embree_geometries = R"doc()doc";
@@ -6957,8 +6953,6 @@ static const char *__doc_mitsuba_ShapeGroup_m_embree_scene = R"doc()doc";
 static const char *__doc_mitsuba_ShapeGroup_m_has_meshes = R"doc()doc";
 
 static const char *__doc_mitsuba_ShapeGroup_m_has_others = R"doc()doc";
-
-static const char *__doc_mitsuba_ShapeGroup_m_sbt_offset = R"doc(OptiX hitgroup sbt offset)doc";
 
 static const char *__doc_mitsuba_ShapeGroup_m_shapes = R"doc()doc";
 
@@ -7214,8 +7208,6 @@ static const char *__doc_mitsuba_Shape_m_id = R"doc()doc";
 static const char *__doc_mitsuba_Shape_m_interior_medium = R"doc()doc";
 
 static const char *__doc_mitsuba_Shape_m_is_instance = R"doc(True if the shape is used in a ``ShapeGroup``)doc";
-
-static const char *__doc_mitsuba_Shape_m_optix_data_ptr = R"doc(OptiX hitgroup data buffer)doc";
 
 static const char *__doc_mitsuba_Shape_m_sensor = R"doc()doc";
 
@@ -7783,17 +7775,29 @@ static const char *__doc_mitsuba_StructConverter_StructConverter =
 R"doc(Construct an optimized conversion routine going from ``source`` to
 ``target``)doc";
 
+static const char *__doc_mitsuba_StructConverter_Value = R"doc()doc";
+
+static const char *__doc_mitsuba_StructConverter_Value_flags = R"doc()doc";
+
+static const char *__doc_mitsuba_StructConverter_Value_type = R"doc()doc";
+
 static const char *__doc_mitsuba_StructConverter_class = R"doc()doc";
 
 static const char *__doc_mitsuba_StructConverter_convert = R"doc(Convert ``count`` elements. Returns ``True`` upon success)doc";
 
 static const char *__doc_mitsuba_StructConverter_convert_2d = R"doc()doc";
 
-static const char *__doc_mitsuba_StructConverter_m_func = R"doc()doc";
+static const char *__doc_mitsuba_StructConverter_linearize = R"doc()doc";
+
+static const char *__doc_mitsuba_StructConverter_load = R"doc()doc";
+
+static const char *__doc_mitsuba_StructConverter_m_dither = R"doc()doc";
 
 static const char *__doc_mitsuba_StructConverter_m_source = R"doc()doc";
 
 static const char *__doc_mitsuba_StructConverter_m_target = R"doc()doc";
+
+static const char *__doc_mitsuba_StructConverter_save = R"doc()doc";
 
 static const char *__doc_mitsuba_StructConverter_source = R"doc(Return the source ``Struct`` descriptor)doc";
 
@@ -9676,6 +9680,38 @@ static const char *__doc_mitsuba_detail_variant_helper_equals = R"doc()doc";
 static const char *__doc_mitsuba_detail_variant_helper_move = R"doc()doc";
 
 static const char *__doc_mitsuba_detail_variant_helper_visit = R"doc()doc";
+
+static const char *__doc_mitsuba_diff_microfacet_lambert_w_minus = R"doc(LambertW_{-1}(x))doc";
+
+static const char *__doc_mitsuba_diff_microfacet_lambert_w_zero = R"doc(LambertW_0(x))doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_beckmann_abs = R"doc(Sample from the combined (absolute valued) dBeckmann distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_beckmann_abs_pdf = R"doc(Density of the positive part of the dBeckmann distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_beckmann_neg = R"doc(Sample from the negative part of the dBeckmann distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_beckmann_neg_pdf = R"doc(Density of the negative part of the dBeckmann distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_beckmann_pdf_aux = R"doc(Helper for evaluating the dBeckmann distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_beckmann_pos = R"doc(Sample from the positive part of the dBeckmann distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_beckmann_pos_pdf = R"doc(Density of the positive part of the dBeckmann distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_ggx_abs = R"doc(Sample from the combined (absolute valued) dGGX distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_ggx_abs_pdf = R"doc(Density of the combined (absolute valued) dGGX distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_ggx_neg = R"doc(Sample from the negative part of the dGGX distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_ggx_neg_pdf = R"doc(Density of the negative part of the dGGX distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_ggx_pdf_aux = R"doc(Helper for evaluating the dGGX distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_ggx_pos = R"doc(Sample from the positive part of the dGGX distribution)doc";
+
+static const char *__doc_mitsuba_diff_microfacet_square_to_d_ggx_pos_pdf = R"doc(Density of the positive part of the dGGX distribution)doc";
 
 static const char *__doc_mitsuba_emitter =
 R"doc(Return the emitter associated with the intersection (if any) \note
@@ -11572,7 +11608,7 @@ static const char *__doc_mitsuba_variant_variant_3 = R"doc()doc";
 
 static const char *__doc_mitsuba_variant_visit = R"doc()doc";
 
-static const char *__doc_mitsuba_warp_beckmann_to_square = R"doc(Inverse of the mapping square_to_uniform_cone)doc";
+static const char *__doc_mitsuba_warp_beckmann_to_square = R"doc(Inverse of the mapping square_to_beckmann)doc";
 
 static const char *__doc_mitsuba_warp_bilinear_to_square = R"doc(Inverse of square_to_bilinear)doc";
 
@@ -11626,6 +11662,10 @@ R"doc(Sample a cosine-weighted vector on the unit hemisphere with respect to
 solid angles)doc";
 
 static const char *__doc_mitsuba_warp_square_to_cosine_hemisphere_pdf = R"doc(Density of square_to_cosine_hemisphere() with respect to solid angles)doc";
+
+static const char *__doc_mitsuba_warp_square_to_ggx = R"doc(Warp a uniformly distributed square sample to a GGX distribution)doc";
+
+static const char *__doc_mitsuba_warp_square_to_ggx_pdf = R"doc(Probability density of square_to_ggx())doc";
 
 static const char *__doc_mitsuba_warp_square_to_rough_fiber =
 R"doc(Warp a uniformly distributed square sample to a rough fiber
