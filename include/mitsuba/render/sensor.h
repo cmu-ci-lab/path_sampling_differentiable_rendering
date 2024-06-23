@@ -100,8 +100,23 @@ public:
     /// Return the length, for which the shutter remains open
     ScalarFloat shutter_open_time() const { return m_shutter_open_time; }
 
+    /// Return the probability of sampling from the differential BSDF
+    ScalarFloat sample_diff_prob() const { return m_sample_diff_prob; }
+
     /// Does the sampling technique require a sample for the aperture position?
     bool needs_aperture_sample() const { return m_needs_sample_3; }
+
+    /// Is adaptive sampling used for estimating gradients?
+    bool adaptive_sampling() const { return m_adaptive_sampling; }
+
+    /// Return the per-pixel weights used for adaptive sampling
+    std::vector<ScalarFloat> pixel_weights() const { return m_pixel_weights; }
+
+    /// Set the per-pixel weights used for adaptive sampling
+    void set_pixel_weights(std::vector<ScalarFloat> weights) { m_pixel_weights = weights; }
+
+    /// Set the probability of sampling from the differential BSDF
+    void set_sample_diff_prob(ScalarFloat sample_diff_prob) { m_sample_diff_prob = sample_diff_prob; }
 
     /// Return the \ref Film instance associated with this sensor
     Film *film() { return m_film; }
@@ -144,6 +159,17 @@ public:
 
     void parameters_changed(const std::vector<std::string> &/*keys*/ = {}) override {
         m_resolution = ScalarVector2f(m_film->crop_size());
+
+        if (m_adaptive_sampling) {
+            ScalarFloat film_size = m_resolution[0] * m_resolution[1];
+            if (m_film->sample_border()) {
+                film_size += 2 * m_film->rfilter()->border_size();
+            }
+            m_pixel_weights = std::vector<ScalarFloat>();
+            for (int i = 0; i < film_size; i++) {
+                m_pixel_weights.push_back(1 / film_size);
+            }
+        }
     }
 
     DRJIT_VCALL_REGISTER(Float, mitsuba::Sensor)
@@ -159,8 +185,11 @@ protected:
     ScalarVector2f m_resolution;
     ScalarFloat m_shutter_open;
     ScalarFloat m_shutter_open_time;
+    ScalarFloat m_sample_diff_prob;
     ref<const Texture> m_srf;
     bool m_alpha;
+    bool m_adaptive_sampling;
+    std::vector<ScalarFloat> m_pixel_weights;
 };
 
 //! @}

@@ -935,6 +935,8 @@ static const char *__doc_mitsuba_BSDF_set_id = R"doc(Set a string identifier)doc
 
 static const char *__doc_mitsuba_BSDF_to_string = R"doc(Return a human-readable representation of the BSDF)doc";
 
+static const char *__doc_mitsuba_BSDF_use_differential_sampling = R"doc(Should this BSDF be sampled differentially?)doc";
+
 static const char *__doc_mitsuba_Bitmap =
 R"doc(General-purpose bitmap class with read and write support for several
 common file formats.
@@ -6794,19 +6796,27 @@ static const char *__doc_mitsuba_Sensor_4 = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_Sensor = R"doc()doc";
 
+static const char *__doc_mitsuba_Sensor_adaptive_sampling = R"doc(Is adaptive sampling used for estimating gradients?)doc";
+
 static const char *__doc_mitsuba_Sensor_class = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_film = R"doc(Return the Film instance associated with this sensor)doc";
 
 static const char *__doc_mitsuba_Sensor_film_2 = R"doc(Return the Film instance associated with this sensor (const))doc";
 
+static const char *__doc_mitsuba_Sensor_m_adaptive_sampling = R"doc()doc";
+
 static const char *__doc_mitsuba_Sensor_m_alpha = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_m_film = R"doc()doc";
 
+static const char *__doc_mitsuba_Sensor_m_pixel_weights = R"doc()doc";
+
 static const char *__doc_mitsuba_Sensor_m_resolution = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_m_sampler = R"doc()doc";
+
+static const char *__doc_mitsuba_Sensor_m_sample_diff_prob = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_m_shutter_open = R"doc()doc";
 
@@ -6827,6 +6837,8 @@ static const char *__doc_mitsuba_Sensor_operator_new = R"doc()doc";
 static const char *__doc_mitsuba_Sensor_operator_new_2 = R"doc()doc";
 
 static const char *__doc_mitsuba_Sensor_parameters_changed = R"doc()doc";
+
+static const char *__doc_mitsuba_Sensor_pixel_weights = R"doc(Return the per-pixel weights used for adaptive sampling)doc";
 
 static const char *__doc_mitsuba_Sensor_sample_ray_differential =
 R"doc(Importance sample a ray differential proportional to the sensor's
@@ -6900,6 +6912,12 @@ This is the *root* sampler, which will later be cloned a number of
 times to provide each participating worker thread with its own
 instance (see Scene::sampler()). Therefore, this sampler should never
 be used for anything except creating clones.)doc";
+
+static const char *__doc_mitsuba_Sensor_sample_diff_prob = R"doc(Return the probability of sampling from the differential BSDF)doc";
+
+static const char *__doc_mitsuba_Sensor_set_pixel_weights = R"doc(Set the per-pixel weights used for adaptive sampling)doc";
+
+static const char *__doc_mitsuba_Sensor_set_sample_diff_prob = R"doc(Set the probability of sampling from the differential BSDF)doc";
 
 static const char *__doc_mitsuba_Sensor_shutter_open = R"doc(Return the time value of the shutter opening event)doc";
 

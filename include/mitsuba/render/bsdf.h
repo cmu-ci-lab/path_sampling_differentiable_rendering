@@ -497,6 +497,9 @@ public:
         return has_flag(m_flags, BSDFFlags::NeedsDifferentials);
     }
 
+    /// Should this BSDF be sampled differentially?
+    virtual bool use_differential_sampling() const { return false; }
+
     /// Number of components this BSDF is comprised of.
     size_t component_count(Mask /*active*/ = true) const {
         return m_components.size();
@@ -606,6 +609,7 @@ DRJIT_VCALL_TEMPLATE_BEGIN(mitsuba::BSDF)
     DRJIT_VCALL_METHOD(eval_pdf)
     DRJIT_VCALL_METHOD(eval_pdf_sample)
     DRJIT_VCALL_METHOD(eval_diffuse_reflectance)
+    DRJIT_VCALL_METHOD(use_differential_sampling)
     DRJIT_VCALL_GETTER(flags, uint32_t)
     auto needs_differentials() const {
         return has_flag(flags(), mitsuba::BSDFFlags::NeedsDifferentials);

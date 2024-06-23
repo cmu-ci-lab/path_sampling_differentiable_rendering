@@ -601,6 +601,10 @@ public:
         return { F * value & active, dr::select(active, pdf, 0.f) };
     }
 
+    bool use_differential_sampling() const override {
+        return m_differential_sampling;
+    }
+
     std::string to_string() const override {
         std::ostringstream oss;
         oss << "RoughConductor[" << std::endl

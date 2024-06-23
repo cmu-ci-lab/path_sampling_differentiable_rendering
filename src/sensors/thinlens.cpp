@@ -145,8 +145,8 @@ template <typename Float, typename Spectrum>
 class ThinLensCamera final : public ProjectiveCamera<Float, Spectrum> {
 public:
     MI_IMPORT_BASE(ProjectiveCamera, m_to_world, m_needs_sample_3, m_film, m_sampler,
-                    m_resolution, m_shutter_open, m_shutter_open_time, m_near_clip,
-                    m_far_clip, m_focus_distance, sample_wavelengths)
+                    m_resolution, m_shutter_open, m_shutter_open_time, m_adaptive_sampling,
+                    m_pixel_weights, m_near_clip, m_far_clip, m_focus_distance, sample_wavelengths)
     MI_IMPORT_TYPES()
 
     ThinLensCamera(const Properties &props) : Base(props) {
@@ -370,6 +370,8 @@ public:
             << "  resolution = " << m_resolution << "," << std::endl
             << "  shutter_open = " << m_shutter_open << "," << std::endl
             << "  shutter_open_time = " << m_shutter_open_time << "," << std::endl
+            << "  adaptive_sampling = " << m_adaptive_sampling << "," << std::endl
+            << "  pixel_weights = " << m_pixel_weights << "," << std::endl
             << "  to_world = " << indent(m_to_world)  << std::endl
             << "]";
         return oss.str();

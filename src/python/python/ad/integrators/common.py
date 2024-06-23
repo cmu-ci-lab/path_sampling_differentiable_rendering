@@ -2,6 +2,7 @@ from __future__ import annotations as __annotations__ # Delayed parsing of type 
 
 import mitsuba as mi
 import drjit as dr
+import numpy as np
 import gc
 
 
@@ -55,7 +56,8 @@ class ADIntegrator(mi.CppADIntegrator):
                seed: int = 0,
                spp: int = 0,
                develop: bool = True,
-               evaluate: bool = True) -> mi.TensorXf:
+               evaluate: bool = True,
+               use_less_samples: Tuple[int, int] = None) -> mi.TensorXf:
 
         if not develop:
             raise Exception("develop=True must be specified when "
@@ -66,16 +68,20 @@ class ADIntegrator(mi.CppADIntegrator):
 
         # Disable derivatives in all of the following
         with dr.suspend_grad():
+            total_sample_count = use_less_samples[0] if use_less_samples else 0
+            if total_sample_count is None: # use `spp` deterministically
+                total_sample_count = 0
             # Prepare the film and sample generator for rendering
             sampler, spp = self.prepare(
                 sensor=sensor,
                 seed=seed,
                 spp=spp,
-                aovs=self.aovs()
+                aovs=self.aovs(),
+                total_sample_count=total_sample_count
             )
 
             # Generate a set of rays starting at the sensor
-            ray, weight, pos, _ = self.sample_rays(scene, sensor, sampler)
+            ray, weight, pos, _ = self.sample_rays(scene, sensor, sampler, total_sample_count=total_sample_count)
 
             # Launch the Monte Carlo sampling process in primal mode
             L, valid, state = self.sample(
@@ -87,6 +93,7 @@ class ADIntegrator(mi.CppADIntegrator):
                 δL=None,
                 state_in=None,
                 reparam=None,
+                p_sample_diff=sensor.sample_diff_prob(),
                 active=mi.Bool(True)
             )
 
@@ -128,11 +135,12 @@ class ADIntegrator(mi.CppADIntegrator):
 
         film = sensor.film()
         aovs = self.aovs()
+        adaptive_sampling = sensor.adaptive_sampling()
 
         # Disable derivatives in all of the following
         with dr.suspend_grad():
             # Prepare the film and sample generator for rendering
-            sampler, spp = self.prepare(sensor, seed, spp, aovs)
+            sampler, spp = self.prepare(sensor, seed, spp, aovs, adaptive_sampling)
 
             # When the underlying integrator supports reparameterizations,
             # perform necessary initialization steps and wrap the result using
@@ -150,8 +158,8 @@ class ADIntegrator(mi.CppADIntegrator):
 
             # Generate a set of rays starting at the sensor, keep track of
             # derivatives wrt. sample positions ('pos') if there are any
-            ray, weight, pos, det = self.sample_rays(scene, sensor,
-                                                     sampler, reparam)
+            ray, weight, pos, det = self.sample_rays(scene, sensor, sampler,
+                                                     reparam, adaptive_sampling)
 
             with dr.resume_grad():
                 L, valid, _ = self.sample(
@@ -209,11 +217,12 @@ class ADIntegrator(mi.CppADIntegrator):
 
         film = sensor.film()
         aovs = self.aovs()
+        adaptive_sampling = sensor.adaptive_sampling()
 
         # Disable derivatives in all of the following
         with dr.suspend_grad():
             # Prepare the film and sample generator for rendering
-            sampler, spp = self.prepare(sensor, seed, spp, aovs)
+            sampler, spp = self.prepare(sensor, seed, spp, aovs, adaptive_sampling)
 
             # When the underlying integrator supports reparameterizations,
             # perform necessary initialization steps and wrap the result using
@@ -231,8 +240,8 @@ class ADIntegrator(mi.CppADIntegrator):
 
             # Generate a set of rays starting at the sensor, keep track of
             # derivatives wrt. sample positions ('pos') if there are any
-            ray, weight, pos, det = self.sample_rays(scene, sensor,
-                                                     sampler, reparam)
+            ray, weight, pos, det = self.sample_rays(scene, sensor, sampler,
+                                                     reparam, adaptive_sampling)
 
             with dr.resume_grad():
                 L, valid, _ = self.sample(
@@ -295,7 +304,10 @@ class ADIntegrator(mi.CppADIntegrator):
         sensor: mi.Sensor,
         sampler: mi.Sampler,
         reparam: Callable[[mi.Ray3f, mi.UInt32, mi.Bool],
-                          Tuple[mi.Vector3f, mi.Float]] = None
+                          Tuple[mi.Vector3f, mi.Float]] = None,
+        adaptive_sampling: bool = False,
+        antithetic_pass: bool = False,
+        total_sample_count: int = 0
     ) -> Tuple[mi.RayDifferential3f, mi.Spectrum, mi.Vector2f, mi.Float]:
         """
         Sample a 2D grid of primary rays for a given sensor
@@ -321,17 +333,34 @@ class ADIntegrator(mi.CppADIntegrator):
         if film.sample_border():
             film_size += 2 * border_size
 
-        spp = sampler.sample_count()
-
         # Compute discrete sample position
-        idx = dr.arange(mi.UInt32, dr.prod(film_size) * spp)
+        if adaptive_sampling or total_sample_count > 0:
+            if adaptive_sampling:
+                pixel_weights = np.asarray(sensor.pixel_weights())
+                assert(np.abs(np.sum(pixel_weights) - 1) < 0.001)
+            else:
+                pixel_weights = np.ones_like(np.asarray(sensor.pixel_weights()))
+            pixel_weights = pixel_weights / np.sum(pixel_weights)
 
-        # Try to avoid a division by an unknown constant if we can help it
-        log_spp = dr.log2i(spp)
-        if 1 << log_spp == spp:
-            idx >>= dr.opaque(mi.UInt32, log_spp)
+            # Fixed number of samples for each pixel
+            # n_samples = dr.prod(film_size) * sampler.sample_count()
+            # spp = np.rint(pixel_weights * n_samples).astype(int)
+            # idx = np.repeat(np.arange(dr.prod(film_size)), spp)
+
+            # Random number of samples for each pixel
+            n_samples = sampler.wavefront_size()
+            s = int(np.sum(sampler.next_1d()))
+            rng = np.random.default_rng(s)
+            idx = rng.choice(dr.prod(film_size), n_samples, p=pixel_weights.flatten())
         else:
-            idx //= dr.opaque(mi.UInt32, spp)
+            spp = sampler.sample_count()
+            idx = dr.arange(mi.UInt32, dr.prod(film_size) * spp)
+            # Try to avoid a division by an unknown constant if we can help it
+            log_spp = dr.log2i(spp)
+            if 1 << log_spp == spp:
+                idx >>= dr.opaque(mi.UInt32, log_spp)
+            else:
+                idx //= dr.opaque(mi.UInt32, spp)
 
         # Compute the position on the image plane
         pos = mi.Vector2i()
@@ -385,7 +414,7 @@ class ADIntegrator(mi.CppADIntegrator):
                     "default)")
 
             # This is less serious, so let's just warn once
-            if not film.sample_border() and self.sample_border_warning:
+            if not film.sample_border() and self.sample_border_warning and not adaptive_sampling:
                 self.sample_border_warning = True
 
                 mi.Log(mi.LogLevel.Warn,
@@ -423,7 +452,10 @@ class ADIntegrator(mi.CppADIntegrator):
                 sensor: mi.Sensor,
                 seed: int = 0,
                 spp: int = 0,
-                aovs: list = []):
+                aovs: list = [],
+                adaptive_sampling: bool = False,
+                antithetic_pass: bool = False,
+                total_sample_count: int = 0):
         """
         Given a sensor and a desired number of samples per pixel, this function
         computes the necessary number of Monte Carlo samples and then suitably
@@ -464,6 +496,18 @@ class ADIntegrator(mi.CppADIntegrator):
             film_size += 2 * film.rfilter().border_size()
 
         wavefront_size = dr.prod(film_size) * spp
+        if antithetic_pass:
+            wavefront_size = spp # use spp as the total number of samples
+            spp = int(spp / dr.prod(film.crop_size()))
+        if total_sample_count > 0:
+            wavefront_size = total_sample_count # total sample count < # of pixels
+            spp = 0
+
+        # For fixed number of samples per pixel, the total number of samples may change
+        # if adaptive_sampling:
+        #     pixel_weights = np.asarray(sensor.pixel_weights())
+        #     spp_adaptive = np.rint(pixel_weights * wavefront_size).astype(int)
+        #     wavefront_size = np.sum(spp_adaptive)
 
         if wavefront_size > 2**32:
             raise Exception(
@@ -580,7 +624,9 @@ class RBIntegrator(ADIntegrator):
                        params: Any,
                        sensor: Union[int, mi.Sensor] = 0,
                        seed: int = 0,
-                       spp: int = 0) -> mi.TensorXf:
+                       spp: int = 0,
+                       antithetic_pass: bool = False,
+                       use_less_samples: Tuple[int, int] = None) -> mi.TensorXf:
         """
         Evaluates the forward-mode derivative of the rendering step.
 
@@ -642,11 +688,14 @@ class RBIntegrator(ADIntegrator):
 
         film = sensor.film()
         aovs = self.aovs()
+        adaptive_sampling = sensor.adaptive_sampling()
+        p_sample_diff = sensor.sample_diff_prob()
 
         # Disable derivatives in all of the following
         with dr.suspend_grad():
             # Prepare the film and sample generator for rendering
-            sampler, spp = self.prepare(sensor, seed, spp, aovs)
+            total_sample_count = use_less_samples[1] if use_less_samples else 0
+            sampler, spp = self.prepare(sensor, seed, spp, aovs, adaptive_sampling, antithetic_pass, total_sample_count)
 
             # When the underlying integrator supports reparameterizations,
             # perform necessary initialization steps and wrap the result using
@@ -664,8 +713,8 @@ class RBIntegrator(ADIntegrator):
 
             # Generate a set of rays starting at the sensor, keep track of
             # derivatives wrt. sample positions ('pos') if there are any
-            ray, weight, pos, det = self.sample_rays(scene, sensor,
-                                                     sampler, reparam)
+            ray, weight, pos, det = self.sample_rays(scene, sensor, sampler,
+                                                     reparam, adaptive_sampling, antithetic_pass, total_sample_count)
 
             # Launch the Monte Carlo sampling process in primal mode (1)
             L, valid, state_out = self.sample(
@@ -677,6 +726,7 @@ class RBIntegrator(ADIntegrator):
                 δL=None,
                 state_in=None,
                 reparam=None,
+                p_sample_diff=p_sample_diff,
                 active=mi.Bool(True)
             )
 
@@ -749,6 +799,7 @@ class RBIntegrator(ADIntegrator):
                 δL=None,
                 state_in=state_out,
                 reparam=reparam,
+                p_sample_diff=p_sample_diff,
                 active=mi.Bool(True)
             )
 
@@ -801,7 +852,9 @@ class RBIntegrator(ADIntegrator):
                         grad_in: mi.TensorXf,
                         sensor: Union[int, mi.Sensor] = 0,
                         seed: int = 0,
-                        spp: int = 0) -> None:
+                        spp: int = 0,
+                        antithetic_pass: bool = False,
+                        use_less_samples: Tuple[int, int] = None) -> None:
         """
         Evaluates the reverse-mode derivative of the rendering step.
 
@@ -857,11 +910,14 @@ class RBIntegrator(ADIntegrator):
 
         film = sensor.film()
         aovs = self.aovs()
+        adaptive_sampling = sensor.adaptive_sampling()
+        p_sample_diff = sensor.sample_diff_prob()
 
         # Disable derivatives in all of the following
         with dr.suspend_grad():
             # Prepare the film and sample generator for rendering
-            sampler, spp = self.prepare(sensor, seed, spp, aovs)
+            total_sample_count = use_less_samples[1] if use_less_samples else 0
+            sampler, spp = self.prepare(sensor, seed, spp, aovs, adaptive_sampling, antithetic_pass, total_sample_count)
 
             # When the underlying integrator supports reparameterizations,
             # perform necessary initialization steps and wrap the result using
@@ -879,8 +935,8 @@ class RBIntegrator(ADIntegrator):
 
             # Generate a set of rays starting at the sensor, keep track of
             # derivatives wrt. sample positions ('pos') if there are any
-            ray, weight, pos, det = self.sample_rays(scene, sensor,
-                                                     sampler, reparam)
+            ray, weight, pos, det = self.sample_rays(scene, sensor, sampler,
+                                                     reparam, adaptive_sampling, antithetic_pass, total_sample_count)
 
             # Launch the Monte Carlo sampling process in primal mode (1)
             L, valid, state_out = self.sample(
@@ -892,6 +948,7 @@ class RBIntegrator(ADIntegrator):
                 δL=None,
                 state_in=None,
                 reparam=None,
+                p_sample_diff=p_sample_diff,
                 active=mi.Bool(True)
             )
 
@@ -954,6 +1011,7 @@ class RBIntegrator(ADIntegrator):
                 δL=δL,
                 state_in=state_out,
                 reparam=reparam,
+                p_sample_diff=p_sample_diff,
                 active=mi.Bool(True)
             )
 

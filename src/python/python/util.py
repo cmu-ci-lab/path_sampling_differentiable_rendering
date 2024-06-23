@@ -361,22 +361,27 @@ class _RenderOp(dr.CustomOp):
         super().__init__()
         self.variant = mi.variant()
 
-    def eval(self, scene, sensor, params, integrator, seed, spp):
+    def eval(self, scene, sensor, params, integrator, seed, spp, antithetic_pass = False, use_less_samples = None):
         self.scene = scene
         self.sensor = sensor
         self.params = params
         self.integrator = integrator
         self.seed = seed
         self.spp = spp
+        self.antithetic_pass = antithetic_pass
+        self.use_less_samples = use_less_samples
+        if use_less_samples:
+            assert sensor.adaptive_sampling()
 
         with dr.suspend_grad():
-            return self.integrator.render(
+            return self.integrator[0].render(
                 scene=self.scene,
                 sensor=sensor,
                 seed=seed[0],
                 spp=spp[0],
                 develop=True,
-                evaluate=False
+                evaluate=False,
+                use_less_samples=self.use_less_samples
             )
 
     def forward(self):
@@ -387,8 +392,8 @@ class _RenderOp(dr.CustomOp):
                             'provided to mi.render() if forward derivatives are '
                             'desired!')
         self.set_grad_out(
-            self.integrator.render_forward(self.scene, self.params, self.sensor,
-                                           self.seed[1], self.spp[1]))
+            self.integrator[1].render_forward(self.scene, self.params, self.sensor,
+                                           self.seed[1], self.spp[1], self.antithetic_pass, self.use_less_samples))
 
     def backward(self):
         mi.set_variant(self.variant)
@@ -397,8 +402,8 @@ class _RenderOp(dr.CustomOp):
                             'scene parameter to be differentiated should be '
                             'provided to mi.render() if backward derivatives are '
                             'desired!')
-        self.integrator.render_backward(self.scene, self.params, self.grad_out(),
-                                        self.sensor, self.seed[1], self.spp[1])
+        self.integrator[1].render_backward(self.scene, self.params, self.grad_out(),
+                                        self.sensor, self.seed[1], self.spp[1], self.antithetic_pass, self.use_less_samples)
 
     def name(self):
         return "RenderOp"
@@ -407,10 +412,13 @@ def render(scene: mi.Scene,
            params: Any = None,
            sensor: Union[int, mi.Sensor] = 0,
            integrator: mi.Integrator = None,
+           integrator_grad: mi.Integrator = None,
            seed: int = 0,
            seed_grad: int = 0,
            spp: int = 0,
-           spp_grad: int = 0) -> mi.TensorXf:
+           spp_grad: int = 0,
+           antithetic_pass: bool = False,
+           use_less_samples: Tuple[int, int] = None) -> mi.TensorXf:
     """
     This function provides a convenient high-level interface to differentiable
     rendering algorithms in Mi. The function returns a rendered image that can
@@ -495,6 +503,9 @@ def render(scene: mi.Scene,
     if integrator is None:
         raise Exception('No integrator specified! Add an integrator in the scene '
                         'description or provide an integrator directly as argument.')
+    
+    if integrator_grad is None:
+        integrator_grad = integrator
 
     if isinstance(sensor, int):
         if len(scene.sensors()) == 0:
@@ -503,6 +514,7 @@ def render(scene: mi.Scene,
         sensor = scene.sensors()[sensor]
 
     assert isinstance(integrator, mi.Integrator)
+    assert isinstance(integrator_grad, mi.Integrator)
     assert isinstance(sensor, mi.Sensor)
 
     if spp_grad == 0:
@@ -515,8 +527,8 @@ def render(scene: mi.Scene,
         raise Exception('The primal and differential seed should be different '
                         'to ensure unbiased gradient computation!')
 
-    return dr.custom(_RenderOp, scene, sensor, params, integrator,
-                     (seed, seed_grad), (spp, spp_grad))
+    return dr.custom(_RenderOp, scene, sensor, params, (integrator, integrator_grad),
+                     (seed, seed_grad), (spp, spp_grad), antithetic_pass, use_less_samples)
 
 # ------------------------------------------------------------------------------
 

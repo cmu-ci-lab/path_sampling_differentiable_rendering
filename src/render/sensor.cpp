@@ -14,6 +14,8 @@ NAMESPACE_BEGIN(mitsuba)
 MI_VARIANT Sensor<Float, Spectrum>::Sensor(const Properties &props) : Base(props) {
     m_shutter_open      = props.get<ScalarFloat>("shutter_open", 0.f);
     m_shutter_open_time = props.get<ScalarFloat>("shutter_close", 0.f) - m_shutter_open;
+    m_sample_diff_prob  = props.get<ScalarFloat>("sample_diff_prob", 0.f);
+    m_adaptive_sampling = props.get<bool>("adaptive_sampling", false);
 
     if (m_shutter_open_time < 0)
         Throw("Shutter opening time must be less than or equal to the shutter "
@@ -51,6 +53,17 @@ MI_VARIANT Sensor<Float, Spectrum>::Sensor(const Properties &props) : Base(props
     }
 
     m_resolution = ScalarVector2f(m_film->crop_size());
+
+    if (m_adaptive_sampling) {
+        ScalarFloat film_size = m_resolution[0] * m_resolution[1];
+        if (m_film->sample_border()) {
+            film_size += 2 * m_film->rfilter()->border_size();
+        }
+        m_pixel_weights = std::vector<ScalarFloat>();
+        for (int i = 0; i < film_size; i++) {
+            m_pixel_weights.push_back(1 / film_size);
+        }
+    }
 
     // Load SRF function if working in spectral mode
     m_srf = nullptr;

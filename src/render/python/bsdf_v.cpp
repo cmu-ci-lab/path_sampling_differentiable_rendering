@@ -115,7 +115,10 @@ template <typename Ptr, typename Cls> void bind_bsdf_generic(Cls &cls) {
         .def("flags", [](Ptr bsdf) { return bsdf->flags(); }, D(BSDF, flags))
         .def("needs_differentials",
              [](Ptr bsdf) { return bsdf->needs_differentials(); },
-             D(BSDF, needs_differentials));
+             D(BSDF, needs_differentials))
+        .def("use_differential_sampling",
+             [](Ptr bsdf) { return bsdf->use_differential_sampling(); },
+             D(BSDF, use_differential_sampling));
 
     if constexpr (dr::is_array_v<Ptr>)
         bind_drjit_ptr_array(cls);
