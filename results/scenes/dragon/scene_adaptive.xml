@@ -1,0 +1,72 @@
+<scene version="2.1.0">
+    <default name="resx" value="384"/>
+    <default name="resy" value="216"/>
+
+    <sensor type="perspective" id='sensor'>
+        <string name="fov_axis" value="x"/>
+        <float name="fov" value="39.597755"/>
+        <float name="near_clip" value="0.100000"/>
+        <float name="far_clip" value="100.000000"/>
+        <transform name="to_world">
+            <rotate x="1" angle="17.199037877306576"/>
+            <rotate y="1" angle="67.03450228830745"/>
+            <rotate z="1" angle="-5.054463782988142"/>
+            <translate value="-1.771334 1.893216 -2.299710"/>
+        </transform>
+        <sampler type="independent">
+            <integer name="sample_count" value="128"/>
+        </sampler>
+        <film type="hdrfilm">
+            <integer name="width" value="$resx"/>
+            <integer name="height" value="$resy"/>
+            <rfilter type="box"/>
+        </film>
+
+        <boolean name="adaptive_sampling" value="true" />
+		<float name="sample_diff_prob" value="0.5" />
+    </sensor>
+
+    <bsdf type="diffuse" id="empty-emitter-bsdf">
+        <rgb value="0.000000" name="reflectance"/>
+    </bsdf>
+
+    <emitter type="constant">
+        <rgb name="radiance" value="0.2"/>
+    </emitter>
+    <shape type="ply">
+        <string name="filename" value="meshes/Plane.001-Material.002.ply"/>
+        <ref id="empty-emitter-bsdf" name="bsdf"/>
+        <emitter type="area">
+            <rgb value="4 2.2 1" name="radiance"/>
+        </emitter>
+    </shape>
+    <shape type="ply">
+        <string name="filename" value="meshes/Plane.002-Material.003.ply"/>
+        <ref id="empty-emitter-bsdf" name="bsdf"/>
+        <emitter type="area">
+            <rgb value="4 7.5 10" name="radiance"/>
+        </emitter>
+    </shape>
+
+    <bsdf type="blendbsdf" id="diff_bsdf">
+		<boolean name="differential_sampling" value="true"/>
+		<float name="weight" value="0.4"/>
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.1, 0.6, 0.35"/>
+		</bsdf>
+		<bsdf type="roughconductor">
+			<string name="distribution" value="ggx"/>
+			<float name="alpha" value="0.01"/>
+			<boolean name="differential_sampling" value="false"/>
+		</bsdf>
+	</bsdf>
+    
+    <shape type="ply">
+        <string name="filename" value="meshes/xyzrgb_dragon-Material.001.ply"/>
+        <ref id="diff_bsdf"/>
+    </shape>
+    <shape type="ply">
+        <string name="filename" value="meshes/Plane.ply"/>
+        <bsdf type="diffuse"/>
+    </shape>
+</scene>
